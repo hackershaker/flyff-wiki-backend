@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import io.github.flyff_wiki.domain.ContentFormat;
 import io.github.flyff_wiki.domain.Document;
+import io.github.flyff_wiki.domain.DocumentHistory;
 import io.github.flyff_wiki.repository.DocumentRepository;
 
 @Service
@@ -38,6 +39,18 @@ public class DocumentService {
         Optional<Document> existing = documentRepository.findById(id);
         if (existing.isPresent()) {
             Document doc = existing.get();
+            // 히스토리 생성: 업데이트 이전 내용을 스냅샷으로 저장합니다.
+            // - 인자: updatedDocument (새로 들어온 문서 정보)
+            // - 리턴값: 없음 (히스토리는 doc에 추가됨)
+            // - 동작 흐름: 기존 본문 스냅샷 -> 편집자/시각 설정 -> doc.addHistory 호출
+            // - 주의사항: 히스토리는 "업데이트 전" 내용을 저장하는 정책입니다.
+            DocumentHistory history = new DocumentHistory();
+            history.setEditor(updatedDocument.getAuthor());
+            history.setContent(doc.getContent());
+            history.setEditedAt(LocalDateTime.now());
+            history.setChangeDescription("Document updated");
+            doc.addHistory(history);
+
             doc.setTitle(updatedDocument.getTitle());
             doc.setContent(updatedDocument.getContent());
             doc.setContentFormat(updatedDocument.getContentFormat());

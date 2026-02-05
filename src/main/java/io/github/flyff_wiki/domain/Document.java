@@ -45,4 +45,20 @@ public class Document {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    /**
+     * 문서에 히스토리를 추가하고 양방향 연관관계를 동기화합니다.
+     * - 인자: history (추가할 히스토리 엔티티)
+     * - 리턴값: 없음 (void)
+     * - 동작 흐름: null 리스트 방지 -> history의 document 설정 -> 리스트에 추가
+     * - 주의사항: history가 null이면 호출자가 null 체크를 해야 합니다.
+     * - 사용 예시: document.addHistory(history);
+     */
+    public void addHistory(DocumentHistory history) {
+        if (latestHistory == null) {
+            latestHistory = new ArrayList<>();
+        }
+        history.setDocument(this);
+        latestHistory.add(history);
+    }
 }
