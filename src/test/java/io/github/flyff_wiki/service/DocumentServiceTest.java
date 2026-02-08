@@ -2,6 +2,7 @@ package io.github.flyff_wiki.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
@@ -112,5 +113,40 @@ public class DocumentServiceTest {
         DocumentHistory history = result.getLatestHistory().get(0);
         assertThat(history.getContent()).isEqualTo("Old Content");
         assertThat(history.getDocument()).isEqualTo(result);
+    }
+
+    @Test
+    public void testUpdateDocumentCreatesWhenIdDoesNotExist() {
+        // 테스트 목적: 업데이트 대상 ID가 없으면 새 문서를 생성하는지 검증합니다.
+        // 기대 동작 흐름: findById -> Optional.empty -> createDocument 분기 -> save 호출
+        // Given: 존재하지 않는 ID와 생성용 문서를 준비합니다.
+        // - findById는 Optional.empty를 반환하도록 설정합니다.
+        // - save는 전달된 엔티티를 그대로 반환하도록 설정합니다.
+        Long missingId = 999L;
+        Document request = new Document();
+        request.setTitle("Newly Created Title");
+        request.setContent("Newly Created Content");
+        request.setContentFormat(ContentFormat.HTML);
+
+        when(documentRepository.findById(missingId)).thenReturn(Optional.empty());
+        when(documentRepository.save(any(Document.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When: updateDocument를 호출합니다.
+        // - ID가 없으므로 생성 분기를 타고 저장되어야 합니다.
+        Document result = documentService.updateDocument(missingId, request);
+
+        // Then: 생성 결과를 검증합니다.
+        // - 입력 제목/본문/포맷이 유지되어야 합니다.
+        // - createdAt/updatedAt이 세팅되어야 합니다.
+        // - 히스토리는 생성 시점에는 추가되지 않아야 합니다.
+        assertThat(result.getTitle()).isEqualTo("Newly Created Title");
+        assertThat(result.getContent()).isEqualTo("Newly Created Content");
+        assertThat(result.getContentFormat()).isEqualTo(ContentFormat.HTML);
+        assertThat(result.getCreatedAt()).isNotNull();
+        assertThat(result.getUpdatedAt()).isNotNull();
+        assertThat(result.getLatestHistory()).isEmpty();
+
+        verify(documentRepository).findById(missingId);
+        verify(documentRepository).save(request);
     }
 }
